@@ -1,9 +1,13 @@
-require('dotenv').config();
+require("dotenv").config();
 
 const express = require("express");
 const mongoose= require("mongoose");
 const bodyParser = require('body-parser');
 const cors = require('cors');
+const authRoutes = require("./routes/authRoutes");
+const userRoutes = require("./routes/userRoutes");
+const adminRoutes = require("./routes/adminRoutes");
+
 
 const { HoldingsModel }= require('./model/HoldingsModel');
 const { PositionsModel } = require('./model/PositionsModel');
@@ -16,6 +20,10 @@ const app = express();
 
 app.use(cors());
 app.use(bodyParser.json());
+app.use(express.json());
+app.use("/api/auth", authRoutes);
+app.use("/api/user", userRoutes);
+app.use("/api/admin", adminRoutes);
 
 // app.get('/addHoldings', async(req, res)=>{
 //     let tempHoldings =[
@@ -187,29 +195,51 @@ app.use(bodyParser.json());
 
 
 app.get('/allHoldings', async(req, res)=>{
-    let allHoldings = await HoldingsModel.find({});
+     try {
+    const allHoldings = await HoldingsModel.find({});
     res.json(allHoldings);
+     }catch(error){
+         res.status(500).json({ message: "Failed to fetch holdings" });
+     }
 });
 
 app.get('/allPositions', async(req, res)=>{
-    let allPostions = await PositionsModel.find({});
+    try{
+    const allPostions = await PositionsModel.find({});
     res.json(allPostions);
+    }catch(error){
+        res.status(500).json({ message: "Failed to fetch positions" });
+    }
+
 });
 
 app.post('/newOrder', async(req ,res)=>{
-    let newOrder = new OrdersModel({
-    name: req.body.name,
-    qty: req.body.qty,
-    price: req.body.price,
-    mode: req.body.mode,
+    try {
+    const { name, qty, price, mode } = req.body;
+
+    const newOrder = new OrdersModel({
+      name,
+      qty,
+      price,
+      mode,
     });
-    newOrder.save();
-    res.send("Order saved");
+
+    await newOrder.save();
+    res.status(201).json({ message: "Order saved successfully" });
+  } catch (error) {
+    res.status(500).json({ message: "Failed to place order" });
+  }
 });
 
-app.listen(PORT, ()=>{
-    console.log("app is started");
-    mongoose.connect(uri);
-        console.log("DB connected")
+mongoose
+  .connect(uri)
+  .then(() => {
+    console.log("MongoDB connected");
+    app.listen(PORT, () => {
+      console.log(`Server running on port ${PORT}`);
     });
+  })
+  .catch((error) => {
+    console.error("DB connection failed:", error);
+  });
     
