@@ -1,17 +1,28 @@
 const nodemailer = require("nodemailer");
 
 const sendEmail = async (to, otp) => {
+   const { EMAIL_USER, EMAIL_PASS, NODE_ENV } = process.env;
+
+  if (!EMAIL_USER || !EMAIL_PASS) {
+    if (NODE_ENV !== "production") {
+      console.warn("Email credentials missing. OTP will be available in API response.");
+      return false;
+    }
+
+    throw new Error("Email credentials are not configured");
+  }
+
   try {
     const transporter = nodemailer.createTransport({
       service: "gmail",
       auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
+        user: EMAIL_USER,
+        pass: EMAIL_PASS,
       },
     });
 
     const mailOptions = {
-      from: `"Finora" <${process.env.EMAIL_USER}>`,
+      from: `"Finora" <${EMAIL_USER}>`,
       to,
       subject: "Finora Account Verification OTP",
       html: `
@@ -26,8 +37,13 @@ const sendEmail = async (to, otp) => {
 
     await transporter.sendMail(mailOptions);
     console.log("OTP email sent to:", to);
+    return true;
   } catch (error) {
-    console.error("Email sending failed:", error);
+    if (NODE_ENV !== "production") {
+      console.warn("Email send failed in non-production. Falling back without email.", error.message);
+      return false;
+    }
+
     throw error;
   }
 };

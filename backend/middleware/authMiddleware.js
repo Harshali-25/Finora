@@ -1,24 +1,39 @@
 const jwt = require("jsonwebtoken");
 
+function extractBearerToken(authorizationHeader) {
+  if (!authorizationHeader) {
+    return { ok: false, message: "No token provided" };
+  }
+
+  if (typeof authorizationHeader !== "string") {
+    return { ok: false, message: "Malformed authorization header" };
+  }
+
+  const [scheme, token] = authorizationHeader.trim().split(/\s+/);
+
+  if (scheme !== "Bearer" || !token) {
+    return { ok: false, message: "Malformed authorization header" };
+  }
+
+  return { ok: true, token };
+}
+
 exports.verifyToken = (req, res, next) => {
-  const authHeader = req.headers.authorization;
+  const extracted = extractBearerToken(req.headers.authorization);
 
-  if (!authHeader)
-    return res.status(401).json({ message: "No token provided" });
+  if (!extracted.ok) {
+    return res.status(401).json({ message: extracted.message });
+  }
 
-  const token = authHeader.split(" ")[1];
+   if (!process.env.JWT_SECRET) {
+    return res.status(500).json({ message: "Server authentication is not configured" });
+  }
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(extracted.token, process.env.JWT_SECRET);
     req.user = decoded;
-    next();
+    return next();
   } catch {
-    res.status(401).json({ message: "Invalid token" });
+    return res.status(401).json({ message: "Invalid token" });
   }
-};
-
-exports.isAdmin = (req, res, next) => {
-  if (req.user.role !== "ADMIN")
-    return res.status(403).json({ message: "Admin access only" });
-  next();
 };

@@ -25,6 +25,14 @@ app.use("/api/auth", authRoutes);
 app.use("/api/user", userRoutes);
 app.use("/api/admin", adminRoutes);
 
+app.get("/api/health", (req, res) => {
+  const dbStates = ["disconnected", "connected", "connecting", "disconnecting"];
+  res.json({
+    status: "ok",
+    dbState: dbStates[mongoose.connection.readyState] || "unknown",
+  });
+});
+
 // app.get('/addHoldings', async(req, res)=>{
 //     let tempHoldings =[
 //   {
