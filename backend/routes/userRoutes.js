@@ -6,12 +6,15 @@ const { OrdersModel } = require("../model/OrdersModel");
 
 const router = express.Router();
 
+// Fetch current user profile
 router.get("/profile", verifyToken, (req, res) => {
   res.json({
     message: "User profile fetched successfully",
     user: req.user,
   });
 });
+
+// Fetch dashboard data for Users
 router.get("/dashboard", verifyToken, async (req, res) => {
   try {
     const [holdings, positions, orders] = await Promise.all([

@@ -1,15 +1,13 @@
 const nodemailer = require("nodemailer");
 
 const sendEmail = async (to, otp) => {
-   const { EMAIL_USER, EMAIL_PASS, NODE_ENV } = process.env;
+  const { EMAIL_USER, EMAIL_PASS, NODE_ENV } = process.env;
 
+  // If credentials are missing, don't crash the server, just log it.
   if (!EMAIL_USER || !EMAIL_PASS) {
-    if (NODE_ENV !== "production") {
-      console.warn("Email credentials missing. OTP will be available in API response.");
-      return false;
-    }
-
-    throw new Error("Email credentials are not configured");
+    console.warn("⚠️ EMAIL_USER or EMAIL_PASS missing in .env. OTP will only be visible in the backend console.");
+    console.log(`DEBUG: OTP for ${to} is [ ${otp} ]`);
+    return false;
   }
 
   try {
@@ -17,7 +15,7 @@ const sendEmail = async (to, otp) => {
       service: "gmail",
       auth: {
         user: EMAIL_USER,
-        pass: EMAIL_PASS,
+        pass: EMAIL_PASS, // Reminder: Use a Google App Password, not your login password
       },
     });
 
@@ -26,25 +24,24 @@ const sendEmail = async (to, otp) => {
       to,
       subject: "Finora Account Verification OTP",
       html: `
-        <h2>Verify Your Finora Account</h2>
-        <p>Your One-Time Password (OTP) is:</p>
-        <h1 style="color: #2563eb;">${otp}</h1>
-        <p>This OTP is valid for <b>10 minutes</b>.</p>
-        <br/>
-        <p>If you did not request this, please ignore this email.</p>
+        <div style="font-family: Arial, sans-serif; border: 1px solid #ddd; padding: 20px;">
+          <h2 style="color: #2563eb;">Verify Your Finora Account</h2>
+          <p>Your One-Time Password (OTP) is:</p>
+          <h1 style="background: #f3f4f6; padding: 10px; text-align: center; letter-spacing: 5px;">${otp}</h1>
+          <p>This OTP is valid for <b>10 minutes</b>.</p>
+          <p>If you did not request this, please ignore this email.</p>
+        </div>
       `,
     };
 
     await transporter.sendMail(mailOptions);
-    console.log("OTP email sent to:", to);
+    console.log("✅ OTP email sent successfully to:", to);
     return true;
   } catch (error) {
-    if (NODE_ENV !== "production") {
-      console.warn("Email send failed in non-production. Falling back without email.", error.message);
-      return false;
-    }
-
-    throw error;
+    // We catch the error here so it doesn't trigger the 'catch' in authRoutes.js
+    console.error("❌ Nodemailer Error:", error.message);
+    console.log(`DEBUG: OTP for ${to} is [ ${otp} ]`);
+    return false; 
   }
 };
 

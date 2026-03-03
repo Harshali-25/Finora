@@ -7,21 +7,12 @@ const sendEmail = require("../utils/sendEmail");
 
 const router = express.Router();
 
-/* ================= DATABASE CHECK ================= */
-const ensureDatabaseConnected = (res) => {
-  if (mongoose.connection.readyState !== 1) {
-    res.status(503).json({
-      message: "Database is not connected. Check MongoDB Atlas connection.",
-    });
-    return false;
-  }
-  return true;
-};
-
 /* ================= REGISTER ================= */
 router.post("/register", async (req, res) => {
   try {
-    if (!ensureDatabaseConnected(res)) return;
+    if (mongoose.connection.readyState !== 1) {
+      return res.status(503).json({ message: "Database connection error" });
+    }
 
     const { name, email, password } = req.body;
     const normalizedEmail = (email || "").trim().toLowerCase();
@@ -30,182 +21,118 @@ router.post("/register", async (req, res) => {
       return res.status(400).json({ message: "All fields are required" });
     }
 
-    const existingUser = await User.findOne({ email: normalizedEmail });
+    let user = await User.findOne({ email: normalizedEmail });
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const otpExpiry = Date.now() + 10 * 60 * 1000;
 
-    if (existingUser) {
-      if (existingUser.isVerified) {
-        return res.status(409).json({ message: "User already exists" });
-      }
-
-      // Regenerate OTP for unverified user
-      const otp = Math.floor(100000 + Math.random() * 900000).toString();
-
-      existingUser.name = name;
-      existingUser.password = await bcrypt.hash(password, 10);
-      existingUser.otp = otp;
-      existingUser.otpExpiry = Date.now() + 10 * 60 * 1000;
-      await existingUser.save();
-
-      const otpSent = await sendEmail(normalizedEmail, otp);
-
-      return res.status(200).json({
-        message: "Account exists but not verified. New OTP sent.",
-        userId: existingUser._id,
-        otpDelivery: otpSent ? "email" : "console",
-      });
+    if (user && user.isVerified) {
+      return res.status(409).json({ message: "User already exists. Please login." });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
-    const user = await User.create({
-      name,
-      email: normalizedEmail,
-      password: hashedPassword,
-      otp,
-      otpExpiry: Date.now() + 10 * 60 * 1000,
-      isVerified: false,
-    });
+    if (user) {
+      user.name = name;
+      user.password = hashedPassword;
+      user.otp = otp;
+      user.otpExpiry = otpExpiry;
+      await user.save();
+    } else {
+      user = await User.create({
+        name,
+        email: normalizedEmail,
+        password: hashedPassword,
+        otp,
+        otpExpiry,
+        isVerified: false,
+      });
+    }
 
     const otpSent = await sendEmail(normalizedEmail, otp);
 
     return res.status(201).json({
-      message: "Registered successfully. OTP sent.",
-      userId: user._id,
-      otpDelivery: otpSent ? "email" : "console",
+      message: otpSent ? "OTP sent to email" : "Registered! (Check server console for OTP)",
+      email: normalizedEmail,
+      otpSent: otpSent
     });
 
   } catch (error) {
     console.error("REGISTER ERROR:", error);
-    return res.status(500).json({ message: "Registration failed" });
+    return res.status(500).json({ message: "Internal Server Error during registration" });
   }
 });
 
 /* ================= VERIFY OTP ================= */
 router.post("/verify-otp", async (req, res) => {
   try {
-    if (!ensureDatabaseConnected(res)) return;
-
     const { email, otp } = req.body;
-    const normalizedEmail = (email || "").trim().toLowerCase();
 
-    if (!normalizedEmail || !otp) {
-      return res.status(400).json({ message: "Email and OTP required" });
+    if (!email || !otp) {
+      return res.status(400).json({ message: "Email and OTP are required" });
     }
 
+    const normalizedEmail = email.trim().toLowerCase();
     const user = await User.findOne({ email: normalizedEmail });
 
-    if (!user) return res.status(404).json({ message: "User not found" });
+    if (!user) {
+      return res.status(404).json({ message: "User not found. Please signup again." });
+    }
 
-    if (!user.otp || user.otp !== otp)
-      return res.status(400).json({ message: "Invalid OTP" });
+    if (user.otp !== otp.toString().trim()) {
+      return res.status(400).json({ message: "Invalid OTP code" });
+    }
 
-    if (!user.otpExpiry || user.otpExpiry < Date.now())
-      return res.status(400).json({ message: "OTP expired" });
+    if (user.otpExpiry && user.otpExpiry < Date.now()) {
+      return res.status(400).json({ message: "OTP has expired. Please signup again." });
+    }
 
     user.isVerified = true;
-    user.otp = null;
+    user.otp = null; 
     user.otpExpiry = null;
     await user.save();
 
-    return res.json({
-      message: "OTP verified successfully. You can now login.",
+    // ✅ FIXED: Frontend expects user details to save to localStorage
+    const token = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, { expiresIn: "1d" });
+
+    return res.status(200).json({ 
+      success: true, 
+      message: "OTP verified successfully.",
+      token,
+      user: { id: user._id, name: user.name, email: user.email }
     });
 
   } catch (error) {
     console.error("VERIFY OTP ERROR:", error);
-    return res.status(500).json({ message: "OTP verification failed" });
-  }
-});
-
-/* ================= RESEND OTP ================= */
-router.post("/resend-otp", async (req, res) => {
-  try {
-    if (!ensureDatabaseConnected(res)) return;
-
-    const { email } = req.body;
-    const normalizedEmail = (email || "").trim().toLowerCase();
-
-    if (!normalizedEmail)
-      return res.status(400).json({ message: "Email required" });
-
-    const user = await User.findOne({ email: normalizedEmail });
-
-    if (!user)
-      return res.status(404).json({ message: "User not found" });
-
-    if (user.isVerified)
-      return res.status(400).json({ message: "User already verified" });
-
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
-
-    user.otp = otp;
-    user.otpExpiry = Date.now() + 10 * 60 * 1000;
-    await user.save();
-
-    const otpSent = await sendEmail(normalizedEmail, otp);
-
-    return res.json({
-      message: "OTP resent successfully",
-      otpDelivery: otpSent ? "email" : "console",
-    });
-
-  } catch (error) {
-    console.error("RESEND OTP ERROR:", error);
-    return res.status(500).json({ message: "Failed to resend OTP" });
+    return res.status(500).json({ message: "Verification failed on server" });
   }
 });
 
 /* ================= LOGIN ================= */
 router.post("/login", async (req, res) => {
   try {
-    if (!ensureDatabaseConnected(res)) return;
-
     const { email, password } = req.body;
     const normalizedEmail = (email || "").trim().toLowerCase();
 
-    if (!normalizedEmail || !password)
-      return res.status(400).json({ message: "Email and password required" });
-
-    if (!process.env.JWT_SECRET)
-      return res.status(500).json({ message: "JWT secret not configured" });
-
     const user = await User.findOne({ email: normalizedEmail });
+    if (!user) return res.status(401).json({ message: "Invalid credentials" });
 
-    if (!user)
-      return res.status(401).json({ message: "Invalid credentials" });
-
-    if (!user.isVerified)
-      return res.status(403).json({ message: "Please verify OTP first" });
+    if (!user.isVerified) {
+      return res.status(403).json({ message: "Please verify your account first" });
+    }
 
     const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) return res.status(401).json({ message: "Invalid credentials" });
 
-    if (!isMatch)
-      return res.status(401).json({ message: "Invalid credentials" });
+    // ✅ FIXED: Role added to token
+    const token = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, { expiresIn: "1d" });
 
-    const token = jwt.sign(
-      { id: user._id, role: user.role },
-      process.env.JWT_SECRET,
-      { expiresIn: "1d" }
-    );
-
-    return res.json({
-      message: "Login successful",
+    res.json({
       token,
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-      },
-      redirectTo: user.role === "ADMIN"
-        ? "/admin/dashboard"
-        : "/dashboard",
+      user: { id: user._id, name: user.name, email: user.email }
     });
-
   } catch (error) {
     console.error("LOGIN ERROR:", error);
-    return res.status(500).json({ message: "Login failed" });
+    res.status(500).json({ message: "Login error" });
   }
 });
 

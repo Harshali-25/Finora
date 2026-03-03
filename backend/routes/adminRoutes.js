@@ -8,6 +8,7 @@ const User = require("../model/UserModel");
 
 const router = express.Router();
 
+// Fetch dashboard stats for Admin
 router.get("/dashboard", verifyToken, isAdmin, async (req, res) => {
   try {
     const [users, verifiedUsers, holdings, positions, orders] = await Promise.all([
