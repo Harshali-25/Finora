@@ -1,15 +1,11 @@
-// src/index.js
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import { BrowserRouter } from 'react-router-dom';
-import App from './App';
-import "./index.css"; // Ensure this import exists
+import './index.css';
+import App from './App'; // This is the App you just fixed
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
   <React.StrictMode>
-    <BrowserRouter>
-      <App />
-    </BrowserRouter>
+    <App /> 
   </React.StrictMode>
 );

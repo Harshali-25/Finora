@@ -1,177 +1,142 @@
-import React, { useState, useContext } from "react";
+import React, { useState } from "react";
 
-import axios from "axios";
+const TradeModal = ({ stock, type, onClose, onConfirm, ownedQty }) => {
+  const [qty, setQty] = useState(1);
+  const [productType, setProductType] = useState("CNC"); 
+  const price = parseFloat(stock.price.toString().replace(/,/g, ""));
+  const total = (price * qty).toFixed(2);
 
-import GeneralContext from "./GeneralContext";
+  return (
+    <div className="modal-overlay">
+      <div className="modal-content">
+        <h2 className="modal-title" style={{ color: type === "BUY" ? "#4184f3" : "#df514a" }}>
+          {type} {stock.name}
+        </h2>
+        <div className="modal-body">
+          <div className="product-selector">
+            <button 
+              className={`toggle-btn ${productType === "CNC" ? "active" : ""}`}
+              onClick={() => setProductType("CNC")}
+            >
+              CNC <span>(Delivery)</span>
+            </button>
+            <button 
+              className={`toggle-btn ${productType === "MIS" ? "active" : ""}`}
+              onClick={() => setProductType("MIS")}
+            >
+              MIS <span>(Intraday)</span>
+            </button>
+          </div>
 
-import { Tooltip, Grow } from "@mui/material";
+          <div className="price-row"><span>Market Price:</span><span className="bold">₹{stock.price}</span></div>
+          {type === "SELL" && <p className="qty-info">You own: {ownedQty}</p>}
+          
+          <div className="input-group">
+            <label>Quantity</label>
+            <input type="number" min="1" value={qty} onChange={(e) => setQty(Number(e.target.value))} />
+          </div>
+          
+          <div className="total-row"><span>Margin Required:</span><span className="bold">₹{total}</span></div>
+        </div>
+        <div className="modal-footer">
+          <button className={type === "BUY" ? "confirm-buy" : "confirm-sell"} onClick={() => onConfirm(qty, productType)}>
+            {type}
+          </button>
+          <button className="btn-cancel" onClick={onClose}>Cancel</button>
+        </div>
+      </div>
+    </div>
+  );
+};
 
-import {
-  BarChartOutlined,
-  KeyboardArrowDown,
-  KeyboardArrowUp,
-  MoreHoriz,
-} from "@mui/icons-material";
+// FIX: Added 'holdings = []' to destructuring to prevent crash
+const WatchList = ({ stocks = [], setStocks, holdings = [], onSelectStock, refreshData }) => {
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedTrade, setSelectedTrade] = useState(null);
+  const [tradeType, setTradeType] = useState(null);
 
-import { watchlist } from "../../dashboard/src/data/data";
-import { DoughnutChart } from "./DoughnoutChart";
-
-const labels = watchlist.map((subArray) => subArray["name"]);
-
-const WatchList = () => {
-  const data = {
-    labels,
-    datasets: [
-      {
-        label: "Price",
-        data: watchlist.map((stock) => stock.price),
-        backgroundColor: [
-          "rgba(255, 99, 132, 0.5)",
-          "rgba(54, 162, 235, 0.5)",
-          "rgba(255, 206, 86, 0.5)",
-          "rgba(75, 192, 192, 0.5)",
-          "rgba(153, 102, 255, 0.5)",
-          "rgba(255, 159, 64, 0.5)",
-        ],
-        borderColor: [
-          "rgba(255, 99, 132, 1)",
-          "rgba(54, 162, 235, 1)",
-          "rgba(255, 206, 86, 1)",
-          "rgba(75, 192, 192, 1)",
-          "rgba(153, 102, 255, 1)",
-          "rgba(255, 159, 64, 1)",
-        ],
-        borderWidth: 1,
-      },
-    ],
+  const togglePin = (name) => {
+    setStocks(prev => prev.map(s => s.name === name ? { ...s, isPinned: !s.isPinned } : s));
   };
 
-  // export const data = {
-  //   labels: ["Red", "Blue", "Yellow", "Green", "Purple", "Orange"],
-  // datasets: [
-  //   {
-  //     label: "# of Votes",
-  //     data: [12, 19, 3, 5, 2, 3],
-  //     backgroundColor: [
-  //       "rgba(255, 99, 132, 0.2)",
-  //       "rgba(54, 162, 235, 0.2)",
-  //       "rgba(255, 206, 86, 0.2)",
-  //       "rgba(75, 192, 192, 0.2)",
-  //       "rgba(153, 102, 255, 0.2)",
-  //       "rgba(255, 159, 64, 0.2)",
-  //     ],
-  //     borderColor: [
-  //       "rgba(255, 99, 132, 1)",
-  //       "rgba(54, 162, 235, 1)",
-  //       "rgba(255, 206, 86, 1)",
-  //       "rgba(75, 192, 192, 1)",
-  //       "rgba(153, 102, 255, 1)",
-  //       "rgba(255, 159, 64, 1)",
-  //     ],
-  //     borderWidth: 1,
-  //   },
-  // ],
-  // };
+  const handleTrade = async (qty, productType) => {
+    const token = localStorage.getItem("token");
+    const tradeData = {
+      name: selectedTrade.name,
+      qty: qty,
+      price: parseFloat(selectedTrade.price.toString().replace(/,/g, "")),
+      product: productType,
+      mode: tradeType 
+    };
+
+    try {
+      const res = await fetch("http://localhost:3002/api/user/trade", {
+        method: "POST",
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}` 
+        },
+        body: JSON.stringify(tradeData),
+      });
+
+      if (res.ok) {
+        alert(`${tradeType} Success!`);
+        refreshData(); // Refresh instead of window.location.reload() for better UX
+      } else {
+        const data = await res.json();
+        alert(data.message || "Transaction Failed");
+      }
+    } catch (err) {
+      alert("Server error. Is the backend running on port 3002?");
+    }
+    setSelectedTrade(null);
+  };
+
+  const sortedStocks = [...stocks].sort((a, b) => (b.isPinned === a.isPinned ? 0 : b.isPinned ? 1 : -1));
+  const filteredStocks = sortedStocks.filter((s) => s.name.toLowerCase().includes(searchTerm.toLowerCase()));
 
   return (
     <div className="watchlist-container">
       <div className="search-container">
-        <input
-          type="text"
-          name="search"
-          id="search"
-          placeholder="Search eg:infy, bse, nifty fut weekly, gold mcx"
-          className="search"
+        <input 
+          type="text" 
+          placeholder="Search eg: infy..." 
+          className="search-input" 
+          value={searchTerm} 
+          onChange={(e) => setSearchTerm(e.target.value)} 
         />
-        <span className="counts"> {watchlist.length} / 50</span>
       </div>
-
       <ul className="list">
-        {watchlist.map((stock, index) => {
-          return <WatchListItem stock={stock} key={index} />;
-        })}
+        {filteredStocks.map((stock, index) => (
+          <li key={index} className="list-item" onClick={() => onSelectStock(stock)}>
+            <div className="item-stats">
+              <i 
+                className={`fa fa-thumb-tack pin-btn ${stock.isPinned ? "is-pinned" : ""}`} 
+                onClick={(e) => { e.stopPropagation(); togglePin(stock.name); }}
+              ></i>
+              <span className={stock.isDown ? "name down" : "name up"}>{stock.name}</span>
+              <span className="price">{stock.price}</span>
+            </div>
+            <div className="actions">
+              <button className="buy-btn" onClick={(e) => { e.stopPropagation(); setSelectedTrade(stock); setTradeType("BUY"); }}>Buy</button>
+              <button className="sell-btn" onClick={(e) => { e.stopPropagation(); setSelectedTrade(stock); setTradeType("SELL"); }}>Sell</button>
+            </div>
+          </li>
+        ))}
       </ul>
 
-      <DoughnutChart data={data} />
+      {selectedTrade && (
+        <TradeModal 
+          stock={selectedTrade} 
+          type={tradeType} 
+          onClose={() => setSelectedTrade(null)} 
+          onConfirm={handleTrade} 
+          // FIX: This .find() won't crash now because holdings is guaranteed to be an array
+          ownedQty={holdings.find(h => h.name === selectedTrade.name)?.qty || 0}
+        />
+      )}
     </div>
   );
 };
 
 export default WatchList;
-
-const WatchListItem = ({ stock }) => {
-  const [showWatchlistActions, setShowWatchlistActions] = useState(false);
-
-  const handleMouseEnter = (e) => {
-    setShowWatchlistActions(true);
-  };
-
-  const handleMouseLeave = (e) => {
-    setShowWatchlistActions(false);
-  };
-
-  return (
-    <li onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave}>
-      <div className="item">
-        <p className={stock.isDown ? "down" : "up"}>{stock.name}</p>
-        <div className="itemInfo">
-          <span className="percent">{stock.percent}</span>
-          {stock.isDown ? (
-            <KeyboardArrowDown className="down" />
-          ) : (
-            <KeyboardArrowUp className="down" />
-          )}
-          <span className="price">{stock.price}</span>
-        </div>
-      </div>
-      {showWatchlistActions && <WatchListActions uid={stock.name} />}
-    </li>
-  );
-};
-
-const WatchListActions = ({ uid }) => {
-  const generalContext = useContext(GeneralContext);
-
-  const handleBuyClick = () => {
-    generalContext.openBuyWindow(uid);
-  };
-
-  return (
-    <span className="actions">
-      <span>
-        <Tooltip
-          title="Buy (B)"
-          placement="top"
-          arrow
-          TransitionComponent={Grow}
-          onClick={handleBuyClick}
-        >
-          <button className="buy">Buy</button>
-        </Tooltip>
-        <Tooltip
-          title="Sell (S)"
-          placement="top"
-          arrow
-          TransitionComponent={Grow}
-        >
-          <button className="sell">Sell</button>
-        </Tooltip>
-        <Tooltip
-          title="Analytics (A)"
-          placement="top"
-          arrow
-          TransitionComponent={Grow}
-        >
-          <button className="action">
-            <BarChartOutlined className="icon" />
-          </button>
-        </Tooltip>
-        <Tooltip title="More" placement="top" arrow TransitionComponent={Grow}>
-          <button className="action">
-            <MoreHoriz className="icon" />
-          </button>
-        </Tooltip>
-      </span>
-    </span>
-  );
-};

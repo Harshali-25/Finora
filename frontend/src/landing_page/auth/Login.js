@@ -1,9 +1,9 @@
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom"; // Import useNavigate
+import { useNavigate } from "react-router-dom";
 
 function Login() {
   const [formData, setFormData] = useState({ email: "", password: "" });
-  const navigate = useNavigate(); // Initialize navigate
+  const navigate = useNavigate();
 
   const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
 
@@ -19,20 +19,22 @@ function Login() {
       const data = await res.json();
       if (!res.ok) return alert(data.message || "Invalid credentials");
 
-      // 1. Store token and user info in localStorage
+      // Save consistent keys
       localStorage.setItem("token", data.token);
-      localStorage.setItem("uid", data.user.id);
-      localStorage.setItem("username", data.user.name);
+      localStorage.setItem("user", JSON.stringify({
+        id: data.user.id || data.user._id,
+        name: data.user.name,
+        role: data.user.role || "USER"
+      }));
 
-      // 2. Redirect to internal Dashboard path
-      navigate("/dashboard");
+      navigate("/dashboard"); // Go to Dashboard
     } catch (err) {
-      alert("Server error. Ensure backend is on 3002.");
+      alert("Server error.");
     }
   };
 
   return (
-    <div className="d-flex justify-content-center align-items-center vh-100">
+    <div className="d-flex justify-content-center align-items-center vh-100 bg-light">
       <div className="card p-4 shadow" style={{ width: "400px" }}>
         <h3 className="text-center mb-3">Login</h3>
         <form onSubmit={handleLogin}>
@@ -40,8 +42,12 @@ function Login() {
           <input type="password" name="password" className="form-control mb-3" placeholder="Password" onChange={handleChange} required />
           <button className="btn btn-primary w-100">Login</button>
         </form>
+        <p className="text-center mt-3">
+          New user? <span className="text-primary" style={{ cursor: "pointer" }} onClick={() => navigate("/signup")}>Create Account</span>
+        </p>
       </div>
     </div>
   );
 }
+
 export default Login;

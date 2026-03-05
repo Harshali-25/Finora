@@ -1,0 +1,558 @@
+/* --- GLOBAL LAYOUT --- */
+.dashboard-wrapper {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+  font-family: 'Inter', -apple-system, sans-serif;
+}
+
+.dashboard-container {
+  display: flex;
+  flex: 1;
+  height: calc(100vh - 60px); 
+  width: 100%;
+  overflow: hidden;
+}
+
+/* --- SIDEBAR / WATCHLIST AREA --- */
+.sidebar {
+  flex-basis: 32%;
+  min-width: 350px;
+  height: 100%;
+  border-right: 1px solid #eeeeee;
+  background: #ffffff;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Thin Scrollbar for Sidebar only */
+.sidebar::-webkit-scrollbar {
+  width: 4px;
+}
+.sidebar::-webkit-scrollbar-thumb {
+  background: #e0e0e0;
+  border-radius: 10px;
+}
+
+/* Full-length Search Bar */
+.search-container {
+  padding: 15px;
+  border-bottom: 1px solid #eee;
+  background: #fff;
+  position: sticky;
+  top: 0;
+}
+
+.search-input {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #f0f0f0;
+  border-radius: 4px;
+  font-size: 14px;
+  outline: none;
+}
+
+.search-input:focus {
+  border-color: #4184f3;
+}
+
+/* --- WATCHLIST ITEMS --- */
+.list-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 20px;
+  border-bottom: 1px solid #f9f9f9;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.list-item:hover {
+  background-color: #f9f9f9;
+}
+
+.item-stats {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+}
+
+/* Pin Button Styling */
+.pin-btn {
+  cursor: pointer;
+  color: #ccc; 
+  font-size: 14px;
+  transition: color 0.2s, transform 0.2s;
+}
+
+.pin-btn:hover { color: #4184f3; }
+
+.pin-btn.is-pinned {
+  color: #4184f3;
+  transform: rotate(30deg); /* Angled pin look */
+}
+
+.name {
+  font-weight: 500;
+  font-size: 14px;
+  min-width: 80px;
+}
+
+.price {
+  margin-left: auto;
+  font-weight: 600;
+  padding-right: 15px;
+}
+
+/* Conditional Colors */
+.up { color: #4caf50; }
+.down { color: #f44336; }
+
+/* Action Buttons (Hidden until Hover) */
+.list-item .actions {
+  display: none;
+  gap: 8px;
+}
+
+.list-item:hover .actions {
+  display: flex;
+}
+
+.buy-btn { background: #4184f3; color: white; border: none; padding: 6px 12px; border-radius: 2px; cursor: pointer; font-size: 12px; font-weight: 600; }
+.sell-btn { background: #df514a; color: white; border: none; padding: 6px 12px; border-radius: 2px; cursor: pointer; font-size: 12px; font-weight: 600; }
+
+/* --- MAIN CONTENT AREA --- */
+.content {
+  flex: 1;
+  height: 100%;
+  background: #ffffff;
+  padding: 30px 50px; 
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+/* --- MODAL STYLING --- */
+.modal-overlay {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+}
+
+.modal-content {
+  background: white;
+  width: 400px;
+  padding: 30px;
+  border-radius: 8px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+}
+
+.modal-title { 
+  margin-bottom: 25px; 
+  font-size: 18px; 
+  font-weight: 700;
+  text-transform: uppercase; 
+  letter-spacing: 0.5px;
+}
+
+.price-row, .total-row { 
+  display: flex; 
+  justify-content: space-between; 
+  margin: 15px 0; 
+  font-size: 15px; 
+}
+
+.bold { font-weight: 700; color: #333; }
+.qty-info { font-size: 12px; color: #888; margin-bottom: 15px; }
+
+.input-group label { display: block; font-size: 13px; color: #666; margin-bottom: 8px; }
+.input-group input { 
+  width: 100%; 
+  padding: 12px; 
+  border: 1px solid #ddd; 
+  border-radius: 4px; 
+  font-size: 16px;
+  outline: none;
+}
+
+.modal-footer { display: flex; gap: 12px; margin-top: 30px; }
+.modal-footer button { 
+  flex: 1; 
+  padding: 14px; 
+  border: none; 
+  border-radius: 4px; 
+  font-weight: 600; 
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.confirm-buy { background: #4184f3; color: white; }
+.confirm-sell { background: #df514a; color: white; }
+.btn-cancel { background: #f5f5f5; color: #666; }
+
+.modal-footer button:hover {
+  opacity: 0.9;
+}
+
+.pin-btn {
+  cursor: pointer;
+  margin-right: 12px;
+  color: #e0e0e0; /* Faint grey when unpinned */
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+
+/* Make it visible on hover so the user knows they CAN pin it */
+.list-item:hover .pin-btn {
+  color: #bbb;
+}
+
+/* This makes it BLUE and ALWAYS visible when pinned */
+.pin-btn.is-pinned {
+  color: #4184f3 !important;
+  opacity: 1 !important;
+  transform: rotate(30deg); 
+}
+
+/* Holdings Table */
+.holdings-container {
+  width: 100%;
+  animation: fadeIn 0.3s ease-in;
+}
+
+.section-title {
+  font-size: 18px;
+  color: #444;
+  margin-bottom: 20px;
+  font-weight: 500;
+}
+
+.holdings-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.holdings-table th {
+  text-align: left;
+  padding: 12px 15px;
+  color: #9b9b9b;
+  font-size: 12px;
+  font-weight: 400;
+  text-transform: uppercase;
+  border-bottom: 1px solid #eee;
+}
+
+.holdings-table td {
+  padding: 15px;
+  border-bottom: 1px solid #f9f9f9;
+  font-size: 14px;
+}
+
+.no-holdings {
+  text-align: center;
+  padding: 40px;
+  color: #888;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+/* Persistent Blue Pinned Icon */
+.pin-btn {
+  color: #eee;
+  margin-right: 12px;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.pin-btn.is-pinned {
+  color: #4184f3 !important; /* Matches the blue in your reference */
+  opacity: 1;
+}
+
+/* Hover-based Buy/Sell visibility */
+.list-item .actions {
+  display: none;
+}
+
+.list-item:hover .actions {
+  display: flex;
+  gap: 8px;
+}
+
+/* Positions Table Styling */
+.positions-container {
+  padding: 20px;
+  background: #fff;
+}
+
+.order-table table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.order-table th {
+  text-align: left;
+  font-size: 12px;
+  color: #9b9b9b;
+  font-weight: 400;
+  padding: 12px;
+  border-bottom: 1px solid #eee;
+  text-transform: uppercase;
+}
+
+.order-table td {
+  padding: 15px 12px;
+  font-size: 14px;
+  border-bottom: 1px solid #f9f9f9;
+  color: #333;
+}
+
+/* Reusing your color variables for consistency */
+.up { color: #4caf50; font-weight: 500; }
+.down { color: #df514a; font-weight: 500; }
+
+.product-selector {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
+.radio-btn {
+  flex: 1;
+  padding: 10px;
+  border: 1px solid #eee;
+  border-radius: 4px;
+  text-align: center;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.radio-btn.active {
+  border-color: #4184f3;
+  background: #f0f7ff;
+}
+
+.radio-btn span {
+  display: block;
+  font-size: 10px;
+  color: #888;
+}
+
+.input-row {
+  display: flex;
+  gap: 10px;
+}
+
+.margin-text {
+  font-size: 12px;
+  color: #666;
+}
+
+.product-selector {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+.toggle-btn {
+  flex: 1;
+  padding: 8px;
+  border: 1px solid #ddd;
+  background: white;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.toggle-btn.active {
+  border-color: #4184f3;
+  background: #f0f7ff;
+  color: #4184f3;
+}
+.toggle-btn span { font-size: 10px; display: block; color: #888; }
+
+.badge {
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: bold;
+  text-transform: uppercase;
+}
+
+/* Blue for BUY */
+.badge.buy {
+  background-color: #e3f2fd;
+  color: #4184f3;
+}
+
+/* Red for SELL */
+.badge.sell {
+  background-color: #fdeaea;
+  color: #df514a;
+}
+
+.status-complete {
+  color: #4caf50;
+  font-weight: bold;
+}
+.product-badge {
+  font-size: 10px;
+  background: #f4f4f4;
+  padding: 2px 5px;
+  border-radius: 2px;
+  color: #666;
+}
+
+.positions-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+}
+
+.positions-table th {
+  padding: 12px;
+  text-align: left;
+  border-bottom: 1px solid #eee;
+  color: #999;
+  font-size: 12px;
+}
+
+.positions-table td {
+  padding: 12px;
+  border-bottom: 1px solid #f9f9f9;
+}
+
+/* Sidebar Container */
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  position: relative;
+}
+
+/* Fixed Search Bar Area */
+.search-container {
+  position: sticky;
+  top: 0;
+  background-color: white; /* Ensures stocks don't show through */
+  z-index: 10;
+  padding: 15px;
+  border-bottom: 1px solid #eee;
+}
+
+/* Scrollable Stock List */
+.stock-list {
+  overflow-y: auto;
+  flex-grow: 1;
+  padding-top: 10px;
+}
+
+.bar-column {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.bar-value {
+  font-size: 11px;
+  color: #4184f3;
+  font-weight: 600;
+  margin-bottom: 5px;
+}
+
+.bar-fill {
+  width: 45px;
+  background-color: #4184f3;
+  border-radius: 2px 2px 0 0;
+  transition: height 0.3s ease;
+}
+
+/* Stats Header */
+.holdings-summary-stats {
+  display: flex;
+  gap: 40px;
+  margin-bottom: 30px;
+  padding: 10px 0;
+}
+.holdings-summary-stats h3 { margin: 5px 0; font-weight: 500; }
+
+/* Chart Layout */
+.advanced-chart-wrapper {
+  display: flex;
+  height: 400px;
+  margin-top: 20px;
+  position: relative;
+}
+
+.y-axis {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding-right: 15px;
+  color: #9b9b9b;
+  font-size: 11px;
+  height: 85%; /* Match grid height */
+}
+
+.chart-main-area {
+  flex: 1;
+  position: relative;
+  border-left: 1px solid #eee;
+  border-bottom: 1px solid #444;
+}
+
+/* Grid Logic */
+.grid-lines {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+.grid-line {
+  width: 100%;
+  border-top: 1px solid #f1f1f1;
+}
+
+/* Bars Logic */
+.bars-container {
+  position: absolute;
+  bottom: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: space-around;
+  align-items: flex-end;
+  padding: 0 20px;
+  z-index: 2;
+}
+
+.bar-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 10%;
+}
+
+.bar-fill-pro {
+  width: 100%;
+  background-color: #9cbdf9; /* Light blue from screenshot */
+  transition: height 0.5s ease;
+}
+
+.bar-name-label {
+  position: absolute;
+  bottom: -25px;
+  font-size: 10px;
+  color: #666;
+  text-transform: uppercase;
+}

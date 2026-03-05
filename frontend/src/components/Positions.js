@@ -1,47 +1,58 @@
 import React from "react";
 
-import { positions } from "../../dashboard/src/data/data";
-
-const Positions = () => {
+const Positions = ({ positions = [] }) => {
   return (
-    <>
-      <h3 className="title">Positions ({positions.length})</h3>
-
-      <div className="order-table">
-        <table>
-          <tr>
-            <th>Product</th>
-            <th>Instrument</th>
-            <th>Qty.</th>
-            <th>Avg.</th>
-            <th>LTP</th>
-            <th>P&L</th>
-            <th>Chg.</th>
-          </tr>
-
-          {positions.map((stock, index) => {
-            const curValue = stock.price * stock.qty;
-            const isProfit = curValue - stock.avg * stock.qty >= 0.0;
-            const profClass = isProfit ? "profit" : "loss";
-            const dayClass = stock.isLoss ? "loss" : "profit";
-
-            return (
-              <tr key={index}>
-                <td>{stock.product}</td>
-                <td>{stock.name}</td>
-                <td>{stock.qty}</td>
-                <td>{stock.avg.toFixed(2)}</td>
-                <td>{stock.price.toFixed(2)}</td>
-                <td className={profClass}>
-                  {(curValue - stock.avg * stock.qty).toFixed(2)}
+    <div className="positions-container">
+      <h3 className="title-small">Positions ({positions.length})</h3>
+      <div className="table-wrapper">
+        <table className="positions-table">
+          <thead>
+            <tr>
+              <th>Product</th>
+              <th>Instrument</th>
+              <th>Qty.</th>
+              <th>Avg.</th>
+              <th>LTP</th>
+              <th>P&L</th>
+              <th>Chg.</th>
+            </tr>
+          </thead>
+          <tbody>
+            {positions.length > 0 ? (
+              positions.map((stock, index) => {
+                const pnl = 0.00; // Calculated as (LTP - Avg) * Qty
+                return (
+                  <tr key={index}>
+                    {/* Dynamic Tag: Shows MIS or CNC based on the trade order */}
+                    <td>
+                      <span className="product-tag">
+                        {stock.product || "MIS"}
+                      </span>
+                    </td>
+                    <td className="bold">{stock.name}</td>
+                    <td className={stock.qty >= 0 ? "profit" : "loss"}>
+                      {stock.qty}
+                    </td>
+                    <td>{stock.avg?.toFixed(2)}</td>
+                    <td>{stock.avg?.toFixed(2)}</td>
+                    <td className={pnl >= 0 ? "profit" : "loss"}>
+                      {pnl >= 0 ? `+${pnl.toFixed(2)}` : pnl.toFixed(2)}
+                    </td>
+                    <td className="profit">+0.00%</td>
+                  </tr>
+                );
+              })
+            ) : (
+              <tr>
+                <td colSpan="7" style={{ textAlign: "center", padding: "20px", color: "#9b9b9b" }}>
+                  You don't have any open positions.
                 </td>
-                <td className={dayClass}>{stock.day}</td>
               </tr>
-            );
-          })}
+            )}
+          </tbody>
         </table>
       </div>
-    </>
+    </div>
   );
 };
 

@@ -1,64 +1,56 @@
-import React, { useState, useEffect } from "react";
-import axios from "axios";
+import React from "react";
 
-const Holdings = () => {
-  const [allHoldings, setAllHoldings] = useState([]);
-  
-  // 1. Get the current user's ID from localStorage
-  const userUID = localStorage.getItem("uid");
+const Holdings = ({ holdings = [] }) => {
+  // DYNAMIC CALCULATION: Links the header numbers to your actual orders
+  const totalInvestment = holdings.reduce((sum, stock) => sum + (stock.avg * stock.qty), 0);
+  const totalCurrentValue = totalInvestment; // In a live app, this would use LTP (Last Traded Price)
+  const totalPnL = totalCurrentValue - totalInvestment;
 
-  useEffect(() => {
-    const fetchHoldings = async () => {
-      try {
-        // 2. Fetch data from your backend
-        const res = await axios.get("http://localhost:3002/allHoldings");
-        
-        // 3. FILTER: Only keep holdings that match THIS user's UID
-        const userSpecificData = res.data.filter(item => item.uid === userUID);
-        
-        setAllHoldings(userSpecificData);
-      } catch (err) {
-        console.error("Error fetching personal holdings", err);
-      }
-    };
-    fetchHoldings();
-  }, [userUID]);
+  const yAxisMarkers = [5000, 4000, 3000, 2000, 1000, 0];
 
   return (
-    <div className="holdings-container content">
-      <h3 className="title">Holdings ({allHoldings.length})</h3>
-      <div className="order-table">
-        <table>
-          <thead>
-            <tr>
-              <th>Instrument</th>
-              <th>Qty.</th>
-              <th>Avg. cost</th>
-              <th>LTP</th>
-              <th>Cur. val</th>
-              <th>P&L</th>
-            </tr>
-          </thead>
-          <tbody>
-            {allHoldings.map((stock, index) => {
-              const curValue = stock.price * stock.qty;
-              const isProfit = curValue - stock.avg * stock.qty >= 0;
-              
-              return (
-                <tr key={index}>
-                  <td>{stock.name}</td>
-                  <td>{stock.qty}</td>
-                  <td>{stock.avg.toFixed(2)}</td>
-                  <td>{stock.price.toFixed(2)}</td>
-                  <td>{curValue.toFixed(2)}</td>
-                  <td className={isProfit ? "profit" : "loss"}>
-                    {(curValue - stock.avg * stock.qty).toFixed(2)}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+    <div className="holdings-container">
+      {/* Dynamic Summary Stats */}
+      <div className="holdings-summary-stats">
+        <div className="stat">
+          <small>Total investment</small>
+          <h3>{totalInvestment.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</h3>
+        </div>
+        <div className="stat">
+          <small>Current value</small>
+          <h3>{totalCurrentValue.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</h3>
+        </div>
+        <div className="stat">
+          <small>P&L</small>
+          <h3 className={totalPnL >= 0 ? "profit" : "loss"}>
+            {totalPnL >= 0 ? `+${totalPnL.toFixed(2)}` : totalPnL.toFixed(2)}
+          </h3>
+        </div>
+      </div>
+
+      <div className="advanced-chart-wrapper">
+        <div className="y-axis">
+          {yAxisMarkers.map(val => <span key={val}>{val}</span>)}
+        </div>
+        
+        <div className="chart-main-area">
+          <div className="grid-lines">
+            {yAxisMarkers.map(val => <div key={val} className="grid-line"></div>)}
+          </div>
+
+          <div className="bars-container">
+            {holdings.map((stock, index) => (
+              <div key={index} className="bar-wrapper">
+                <div 
+                  className="bar-fill-pro" 
+                  style={{ height: `${(stock.avg / 5000) * 100}%` }}
+                  title={`Avg: ${stock.avg}`}
+                ></div>
+                <span className="bar-name-label">{stock.name}</span>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     </div>
   );

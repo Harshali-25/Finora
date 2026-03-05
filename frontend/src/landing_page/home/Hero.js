@@ -5,7 +5,7 @@ function Hero() {
   const navigate = useNavigate();
 
   return (
-    <div className="container p-5 mb-2">
+    <div className="container mb-2">
       <div className="row text-center">
         <img
           src="media/images/homeHero.png"
