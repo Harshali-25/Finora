@@ -1,37 +1,34 @@
 const express = require("express");
 const { verifyToken } = require("../middleware/authMiddleware");
 const { isAdmin } = require("../middleware/adminMiddleware");
-const { HoldingsModel } = require("../model/HoldingsModel");
-const { PositionsModel } = require("../model/PositionsModel");
-const { OrdersModel } = require("../model/OrdersModel");
 const User = require("../model/UserModel");
+const { OrdersModel } = require("../model/OrdersModel");
+const { HoldingsModel } = require("../model/HoldingsModel");
 
 const router = express.Router();
 
-// Fetch dashboard stats for Admin
+// Fetch dashboard stats - Only accessible by ADMIN
 router.get("/dashboard", verifyToken, isAdmin, async (req, res) => {
   try {
-    const [users, verifiedUsers, holdings, positions, orders] = await Promise.all([
+    const [usersCount, ordersCount, allHoldings] = await Promise.all([
       User.countDocuments({}),
-      User.countDocuments({ isVerified: true }),
-      HoldingsModel.countDocuments({}),
-      PositionsModel.countDocuments({}),
       OrdersModel.countDocuments({}),
+      HoldingsModel.find({}),
     ]);
 
+    // Feature 5: Calculate Overall Created Value
+    const totalValue = allHoldings.reduce((acc, curr) => acc + (curr.qty * curr.avg), 0);
+
     res.json({
-      message: "Welcome Admin",
+      success: true,
       stats: {
-        users,
-        verifiedUsers,
-        holdings,
-        positions,
-        orders,
+        users: usersCount,
+        orders: ordersCount,
+        totalValue: totalValue.toFixed(2),
       },
     });
   } catch (error) {
-    console.error("ADMIN DASHBOARD ERROR:", error);
-    res.status(500).json({ message: "Failed to fetch dashboard data" });
+    res.status(500).json({ message: "Error fetching admin data" });
   }
 });
 

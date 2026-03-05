@@ -1,14 +1,15 @@
 const { Schema } = require("mongoose");
 
 const PositionsSchema = new Schema({
-  product: String, // "MIS" (Intraday) or "CNC" (Delivery)
-  name: String, // Stock symbol
-  qty: Number, // Quantity
-  avg: Number, // Average purchase price
-  price: Number, // Current market price
-  net: String, // Net P&L
-  day: String, // Day's change
-  isLoss: Boolean, // Helper for UI color-coding
+  user: { type: Schema.Types.ObjectId, ref: "User", required: true },
+  product: String, 
+  name: String, 
+  qty: Number, 
+  avg: Number, 
+  price: Number, 
+  net: String, 
+  day: String, 
+  isLoss: Boolean,
 });
 
 module.exports = { PositionsSchema };

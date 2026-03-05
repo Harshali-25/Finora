@@ -3,6 +3,10 @@ const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
 
+// Import Middleware & Services
+const { verifyToken } = require("./middleware/authMiddleware");
+const startAlertWorker = require("./services/alertWorker"); // New service
+
 // Routes
 const authRoutes = require("./routes/authRoutes");
 const userRoutes = require("./routes/userRoutes");
@@ -12,6 +16,8 @@ const adminRoutes = require("./routes/adminRoutes");
 const { HoldingsModel } = require('./model/HoldingsModel');
 const { PositionsModel } = require('./model/PositionsModel');
 const { OrdersModel } = require('./model/OrdersModel');
+const AlertModel = require("./model/AlertModel"); // Import the new Alert Model
+const User = require("./model/UserModel");
 
 const app = express();
 const PORT = process.env.PORT || 3002;
@@ -30,91 +36,111 @@ app.use("/api/auth", authRoutes);
 app.use("/api/user", userRoutes);
 app.use("/api/admin", adminRoutes);
 
-// --- ORDER LOGIC (STAMPED WITH UID) ---
-app.post("/newOrder", async (req, res) => {
+// --- FEATURE 7: ALERT ROUTES ---
+app.post("/newAlert", verifyToken, async (req, res) => {
   try {
-    const { name, qty, price, mode, product, uid } = req.body; 
-
-    if (!uid) return res.status(400).send("User ID is missing");
-
-    // Save to order history
-    let newOrder = new OrdersModel({
+    const { name, targetPrice, condition } = req.body;
+    const newAlert = new AlertModel({
+      user: req.user.id,
       name,
-      qty: Number(qty),
-      price: Number(price),
-      mode,
-      uid // Ownership stamp for data isolation
+      targetPrice: Number(targetPrice),
+      condition,
     });
-    await newOrder.save();
-
-    // Update Positions (Intraday - MIS) or Holdings (Delivery - CNC)
-    if (product === "MIS") {
-      const existingPos = await PositionsModel.findOne({ name, uid });
-      if (mode === "BUY") {
-        if (existingPos) {
-          existingPos.qty += Number(qty);
-          await existingPos.save();
-        } else {
-          await PositionsModel.create({ name, qty: Number(qty), avg: price, price, product: "MIS", uid });
-        }
-      }
-      // Note: SELL logic for MIS needs to be implemented based on requirements
-    } else {
-      const existingHold = await HoldingsModel.findOne({ name, uid });
-      if (mode === "BUY") {
-        if (existingHold) {
-          const oldTotal = existingHold.avg * existingHold.qty;
-          const newTotal = price * Number(qty);
-          existingHold.qty += Number(qty);
-          existingHold.avg = (oldTotal + newTotal) / existingHold.qty;
-          await existingHold.save();
-        } else {
-          await HoldingsModel.create({ name, qty: Number(qty), avg: price, price, uid });
-        }
-      }
-      // Note: SELL logic for CNC needs to be implemented based on requirements
-    }
-    res.status(201).send("Success");
+    await newAlert.save();
+    res.status(201).json({ message: "Alert set successfully" });
   } catch (err) {
-    console.error("ORDER ERROR:", err);
-    res.status(500).send(err.message);
+    res.status(500).json({ message: "Failed to set alert" });
   }
 });
 
-// --- FILTERED DATA FETCHING ---
-app.get('/allHoldings', async (req, res) => {
+// --- FEATURE 3: SECURE BUY/SELL ENGINE ---
+app.post("/newOrder", verifyToken, async (req, res) => {
   try {
-    const { uid } = req.query; 
-    if (!uid) return res.status(400).json({ message: "UID missing" });
-    const userHoldings = await HoldingsModel.find({ uid }); // Private data only
+    const { name, qty, price, mode, product } = req.body; 
+    const userId = req.user.id;
+
+    const numQty = Number(qty);
+    const numPrice = Number(price);
+
+    const newOrder = new OrdersModel({
+      user: userId,
+      name,
+      qty: numQty,
+      price: numPrice,
+      mode,
+    });
+    await newOrder.save();
+
+    if (mode === "BUY") {
+      if (product === "MIS") {
+        const existingPos = await PositionsModel.findOne({ name, user: userId });
+        if (existingPos) {
+          existingPos.qty += numQty;
+          await existingPos.save();
+        } else {
+          await PositionsModel.create({ name, qty: numQty, avg: numPrice, price: numPrice, product: "MIS", user: userId });
+        }
+      } else {
+        const existingHold = await HoldingsModel.findOne({ name, user: userId });
+        if (existingHold) {
+          const oldTotalValue = existingHold.avg * existingHold.qty;
+          const newTotalValue = numPrice * numQty;
+          existingHold.qty += numQty;
+          existingHold.avg = (oldTotalValue + newTotalValue) / existingHold.qty;
+          await existingHold.save();
+        } else {
+          await HoldingsModel.create({ name, qty: numQty, avg: numPrice, price: numPrice, user: userId });
+        }
+      }
+    } 
+    else if (mode === "SELL") {
+      const model = (product === "MIS") ? PositionsModel : HoldingsModel;
+      const existingAsset = await model.findOne({ name, user: userId });
+
+      if (!existingAsset || existingAsset.qty < numQty) {
+        return res.status(400).json({ message: "Insufficient quantity to sell" });
+      }
+
+      existingAsset.qty -= numQty;
+      if (existingAsset.qty === 0) {
+        await existingAsset.deleteOne();
+      } else {
+        await existingAsset.save();
+      }
+    }
+
+    res.status(201).json({ message: "Order processed successfully" });
+  } catch (err) {
+    console.error("ORDER ERROR:", err);
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// --- FEATURE 4: PERSONALIZED DATA FETCHING ---
+app.get('/allHoldings', verifyToken, async (req, res) => {
+  try {
+    const userHoldings = await HoldingsModel.find({ user: req.user.id });
     res.json(userHoldings);
   } catch (error) {
-    console.error("HOLDINGS ERROR:", error);
     res.status(500).json({ message: "Failed to fetch holdings" });
   }
 });
 
-app.get("/allPositions", async (req, res) => {
+app.get("/allPositions", verifyToken, async (req, res) => {
   try {
-    const { uid } = req.query;
-    if (!uid) return res.status(400).json({ message: "UID missing" });
-    const userPositions = await PositionsModel.find({ uid }); // Private data only
+    const userPositions = await PositionsModel.find({ user: req.user.id });
     res.json(userPositions);
   } catch (error) {
-    console.error("POSITIONS ERROR:", error);
     res.status(500).json({ message: "Failed to fetch positions" });
   }
 });
 
-app.get("/allOrders", async (req, res) => {
+app.get("/allOrders", verifyToken, async (req, res) => {
   try {
-    const { uid } = req.query;
-    if (!uid) return res.status(400).json({ message: "UID missing" });
-    let userOrders = await OrdersModel.find({ uid }); // Private history only
+    const userOrders = await OrdersModel.find({ user: req.user.id });
     res.json(userOrders);
   } catch (err) {
-    console.error("ORDERS ERROR:", err);
-    res.status(500).send(err);
+    res.status(500).json({ message: "Failed to fetch orders" });
   }
 });
 
@@ -122,6 +148,10 @@ app.get("/allOrders", async (req, res) => {
 mongoose.connect(uri)
   .then(() => {
     console.log("Connected to MongoDB");
+    
+    // Initialize the Price Alert Worker
+    startAlertWorker(); 
+    
     app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
   })
   .catch((error) => console.error("DB connection failed:", error.message));

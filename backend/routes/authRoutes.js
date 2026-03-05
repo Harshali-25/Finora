@@ -14,7 +14,7 @@ router.post("/register", async (req, res) => {
       return res.status(503).json({ message: "Database connection error" });
     }
 
-    const { name, email, password } = req.body;
+    const { name, email, password, role } = req.body; // Added role here
     const normalizedEmail = (email || "").trim().toLowerCase();
 
     if (!name || !normalizedEmail || !password) {
@@ -36,6 +36,7 @@ router.post("/register", async (req, res) => {
       user.password = hashedPassword;
       user.otp = otp;
       user.otpExpiry = otpExpiry;
+      user.role = role || "USER"; // Default to USER
       await user.save();
     } else {
       user = await User.create({
@@ -45,20 +46,20 @@ router.post("/register", async (req, res) => {
         otp,
         otpExpiry,
         isVerified: false,
+        role: role || "USER", 
       });
     }
 
-    const otpSent = await sendEmail(normalizedEmail, otp);
+    const otpSent = await sendEmail(normalizedEmail, `Your Finora Verification Code is: ${otp}`);
 
     return res.status(201).json({
       message: otpSent ? "OTP sent to email" : "Registered! (Check server console for OTP)",
       email: normalizedEmail,
-      otpSent: otpSent
     });
 
   } catch (error) {
     console.error("REGISTER ERROR:", error);
-    return res.status(500).json({ message: "Internal Server Error during registration" });
+    return res.status(500).json({ message: "Internal Server Error" });
   }
 });
 
@@ -66,24 +67,10 @@ router.post("/register", async (req, res) => {
 router.post("/verify-otp", async (req, res) => {
   try {
     const { email, otp } = req.body;
+    const user = await User.findOne({ email: email.trim().toLowerCase() });
 
-    if (!email || !otp) {
-      return res.status(400).json({ message: "Email and OTP are required" });
-    }
-
-    const normalizedEmail = email.trim().toLowerCase();
-    const user = await User.findOne({ email: normalizedEmail });
-
-    if (!user) {
-      return res.status(404).json({ message: "User not found. Please signup again." });
-    }
-
-    if (user.otp !== otp.toString().trim()) {
-      return res.status(400).json({ message: "Invalid OTP code" });
-    }
-
-    if (user.otpExpiry && user.otpExpiry < Date.now()) {
-      return res.status(400).json({ message: "OTP has expired. Please signup again." });
+    if (!user || user.otp !== otp.toString().trim() || user.otpExpiry < Date.now()) {
+      return res.status(400).json({ message: "Invalid or expired OTP" });
     }
 
     user.isVerified = true;
@@ -91,19 +78,15 @@ router.post("/verify-otp", async (req, res) => {
     user.otpExpiry = null;
     await user.save();
 
-    // ✅ FIXED: Frontend expects user details to save to localStorage
     const token = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, { expiresIn: "1d" });
 
     return res.status(200).json({ 
       success: true, 
-      message: "OTP verified successfully.",
       token,
-      user: { id: user._id, name: user.name, email: user.email }
+      user: { id: user._id, name: user.name, email: user.email, role: user.role }
     });
-
   } catch (error) {
-    console.error("VERIFY OTP ERROR:", error);
-    return res.status(500).json({ message: "Verification failed on server" });
+    res.status(500).json({ message: "Verification failed" });
   }
 });
 
@@ -111,28 +94,65 @@ router.post("/verify-otp", async (req, res) => {
 router.post("/login", async (req, res) => {
   try {
     const { email, password } = req.body;
-    const normalizedEmail = (email || "").trim().toLowerCase();
+    const user = await User.findOne({ email: email.trim().toLowerCase() });
 
-    const user = await User.findOne({ email: normalizedEmail });
-    if (!user) return res.status(401).json({ message: "Invalid credentials" });
-
-    if (!user.isVerified) {
-      return res.status(403).json({ message: "Please verify your account first" });
+    if (!user || !user.isVerified) {
+      return res.status(401).json({ message: "Invalid credentials or unverified account" });
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) return res.status(401).json({ message: "Invalid credentials" });
 
-    // ✅ FIXED: Role added to token
     const token = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, { expiresIn: "1d" });
 
     res.json({
       token,
-      user: { id: user._id, name: user.name, email: user.email }
+      user: { id: user._id, name: user.name, email: user.email, role: user.role }
     });
   } catch (error) {
-    console.error("LOGIN ERROR:", error);
     res.status(500).json({ message: "Login error" });
+  }
+});
+
+/* ================= FORGOT PASSWORD (FEATURE 7) ================= */
+router.post("/forgot-password", async (req, res) => {
+  try {
+    const { email } = req.body;
+    const user = await User.findOne({ email: email.trim().toLowerCase() });
+
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    const resetOtp = Math.floor(100000 + Math.random() * 900000).toString();
+    user.otp = resetOtp;
+    user.otpExpiry = Date.now() + 15 * 60 * 1000; // 15 mins expiry
+    await user.save();
+
+    await sendEmail(user.email, `Your Password Reset Code: ${resetOtp}`);
+
+    res.json({ message: "Password reset OTP sent to your email" });
+  } catch (error) {
+    res.status(500).json({ message: "Error sending reset email" });
+  }
+});
+
+/* ================= RESET PASSWORD ================= */
+router.post("/reset-password", async (req, res) => {
+  try {
+    const { email, otp, newPassword } = req.body;
+    const user = await User.findOne({ email: email.trim().toLowerCase() });
+
+    if (!user || user.otp !== otp.toString().trim() || user.otpExpiry < Date.now()) {
+      return res.status(400).json({ message: "Invalid or expired OTP" });
+    }
+
+    user.password = await bcrypt.hash(newPassword, 10);
+    user.otp = null;
+    user.otpExpiry = null;
+    await user.save();
+
+    res.json({ message: "Password reset successful. You can now login." });
+  } catch (error) {
+    res.status(500).json({ message: "Reset failed" });
   }
 });
 
