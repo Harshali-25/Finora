@@ -1,55 +1,115 @@
 import React from "react";
 
 const Holdings = ({ holdings = [] }) => {
-  // DYNAMIC CALCULATION: Links the header numbers to your actual orders
-  const totalInvestment = holdings.reduce((sum, stock) => sum + (stock.avg * stock.qty), 0);
-  const totalCurrentValue = totalInvestment; // In a live app, this would use LTP (Last Traded Price)
-  const totalPnL = totalCurrentValue - totalInvestment;
+  const sanitizedHoldings = holdings.map(stock => {
+    const qty = Number(stock.qty) || 0;
+    const avg = Number(stock.avg) || 0;
+    const livePrice = Number(stock.price) || avg;
+    return {
+      ...stock,
+      qty,
+      avg,
+      livePrice,
+      totalValue: qty * livePrice,
+      pnl: (livePrice - avg) * qty,
+    };
+  });
 
-  const yAxisMarkers = [5000, 4000, 3000, 2000, 1000, 0];
+  const currentTotalMax = sanitizedHoldings.length > 0 
+    ? Math.max(...sanitizedHoldings.map(h => h.totalValue)) 
+    : 1000;
+  
+  const topMarker = currentTotalMax > 0 ? Math.ceil(currentTotalMax / 500) * 500 : 1000;
 
   return (
-    <div className="holdings-container">
-      {/* Dynamic Summary Stats */}
-      <div className="holdings-summary-stats">
-        <div className="stat">
-          <small>Total investment</small>
-          <h3>{totalInvestment.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</h3>
-        </div>
-        <div className="stat">
-          <small>Current value</small>
-          <h3>{totalCurrentValue.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</h3>
-        </div>
-        <div className="stat">
-          <small>P&L</small>
-          <h3 className={totalPnL >= 0 ? "profit" : "loss"}>
-            {totalPnL >= 0 ? `+${totalPnL.toFixed(2)}` : totalPnL.toFixed(2)}
-          </h3>
-        </div>
+    <div style={{ padding: "20px", fontFamily: "sans-serif" }}>
+      <h3 style={{ marginBottom: "20px" }}>Holdings ({holdings.length})</h3>
+
+      {/* Table Section */}
+      <div style={{ overflowX: "auto", marginBottom: "40px" }}>
+        <table style={{ width: "100%", borderCollapse: "collapse" }}>
+          <thead>
+            <tr style={{ textAlign: "left", borderBottom: "1px solid #eee", color: "#999", fontSize: "12px" }}>
+              <th style={{ padding: "12px" }}>INSTRUMENT</th>
+              <th style={{ textAlign: "right" }}>QTY.</th>
+              <th style={{ textAlign: "right" }}>LTP (LIVE)</th>
+              <th style={{ textAlign: "right", paddingRight: "12px" }}>CUR. VAL</th>
+            </tr>
+          </thead>
+          <tbody>
+            {sanitizedHoldings.map((stock, i) => (
+              <tr key={i} style={{ borderBottom: "1px solid #f9f9f9" }}>
+                <td style={{ fontWeight: "600", padding: "15px 12px" }}>{stock.name}</td>
+                <td style={{ textAlign: "right" }}>{stock.qty}</td>
+                <td style={{ textAlign: "right", color: "#4caf50" }}>₹{stock.livePrice.toFixed(2)}</td>
+                <td style={{ textAlign: "right", paddingRight: "12px" }}>₹{stock.totalValue.toFixed(2)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
 
-      <div className="advanced-chart-wrapper">
-        <div className="y-axis">
-          {yAxisMarkers.map(val => <span key={val}>{val}</span>)}
-        </div>
+      {/* --- CSS-PROOF BAR CHART --- */}
+      <h4 style={{ color: "#666", fontSize: "14px", marginBottom: "15px" }}>Portfolio Concentration</h4>
+      
+      {/* Container with fixed height to override Dashboard.css overflow issues */}
+      <div style={{ 
+        display: "block", 
+        height: "300px", 
+        width: "100%", 
+        border: "1px solid #eee", 
+        position: "relative",
+        backgroundColor: "#fff",
+        padding: "20px"
+      }}>
         
-        <div className="chart-main-area">
-          <div className="grid-lines">
-            {yAxisMarkers.map(val => <div key={val} className="grid-line"></div>)}
-          </div>
+        {/* Y-Axis (Absolute Positioned to avoid flex-squish) */}
+        <div style={{ 
+          position: "absolute", 
+          left: "10px", 
+          top: "20px", 
+          bottom: "40px", 
+          width: "50px", 
+          display: "flex", 
+          flexDirection: "column", 
+          justifyContent: "space-between",
+          fontSize: "10px",
+          color: "#aaa",
+          borderRight: "1px solid #eee"
+        }}>
+          <span>₹{topMarker}</span>
+          <span>₹{topMarker / 2}</span>
+          <span>0</span>
+        </div>
 
-          <div className="bars-container">
-            {holdings.map((stock, index) => (
-              <div key={index} className="bar-wrapper">
-                <div 
-                  className="bar-fill-pro" 
-                  style={{ height: `${(stock.avg / 5000) * 100}%` }}
-                  title={`Avg: ${stock.avg}`}
-                ></div>
-                <span className="bar-name-label">{stock.name}</span>
+        {/* Bars Container */}
+        <div style={{ 
+          marginLeft: "60px", 
+          height: "240px", // Fixed height in pixels
+          display: "flex", 
+          alignItems: "flex-end", 
+          justifyContent: "space-around" 
+        }}>
+          {sanitizedHoldings.map((stock, index) => {
+            // Calculate height in PIXELS instead of % to bypass CSS parent height issues
+            const pixelHeight = (stock.totalValue / topMarker) * 200; 
+            const finalHeight = Math.max(pixelHeight, 15); // Minimum 15px height
+
+            return (
+              <div key={index} style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                <span style={{ fontSize: "10px", color: "#888", marginBottom: "4px" }}>
+                  ₹{Math.round(stock.totalValue)}
+                </span>
+                <div style={{ 
+                  height: `${finalHeight}px`, // Fixed Pixel height
+                  width: "40px", 
+                  backgroundColor: "#4184f3", 
+                  borderRadius: "4px 4px 0 0" 
+                }}></div>
+                <span style={{ marginTop: "8px", fontSize: "11px", fontWeight: "bold" }}>{stock.name}</span>
               </div>
-            ))}
-          </div>
+            );
+          })}
         </div>
       </div>
     </div>

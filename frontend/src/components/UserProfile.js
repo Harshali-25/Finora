@@ -1,123 +1,89 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-import { useNavigate } from "react-router-dom";
 
 const UserProfile = () => {
   const [userData, setUserData] = useState(null);
-  const [loading, setLoading] = useState(true); // Track loading state
+  const [overallInvestment, setOverallInvestment] = useState(0);
+  const [loading, setLoading] = useState(true);
+  
   const token = localStorage.getItem("token");
-  const navigate = useNavigate();
 
   useEffect(() => {
-    const fetchProfile = async () => {
+    const fetchAllData = async () => {
       try {
-        const res = await axios.get("http://localhost:3002/api/user/profile", {
+        // 1. Fetch Profile Details
+        const profileRes = await axios.get("http://localhost:3002/api/user/profile", {
           headers: { Authorization: `Bearer ${token}` },
         });
-        setUserData(res.data.user);
+        setUserData(profileRes.data.user);
+
+        // 2. Fetch Holdings
+        const holdingsRes = await axios.get("http://localhost:3002/api/holdings", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        
+        const total = holdingsRes.data.reduce((sum, stock) => 
+          sum + (Number(stock.qty || 0) * Number(stock.avg || 0)), 0);
+        
+        setOverallInvestment(total);
       } catch (err) {
-        console.error("Error fetching profile", err);
-        if (err.response?.status === 401) {
-          localStorage.removeItem("token");
-          window.location.href = "http://localhost:3001";
+        console.error("API Error - pulling from local storage");
+        
+        // FAILSAFE: If API fails, pull the name exactly how the Navbar does
+        const storedUser = JSON.parse(localStorage.getItem("user"));
+        if (storedUser) {
+          setUserData(storedUser);
         }
       } finally {
-        setLoading(false); // Stop loading regardless of outcome
+        setLoading(false);
       }
     };
-    if (token) fetchProfile();
+
+    if (token) fetchAllData();
     else setLoading(false);
   }, [token]);
 
   const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    window.location.href = "http://localhost:3001"; 
+    localStorage.clear();
+    window.location.href = "/login"; // Same port redirect
   };
 
-  // 1. Show loader while waiting for API
-  if (loading) return (
-    <div style={{ display: "flex", justifyContent: "center", padding: "100px", fontSize: "18px", color: "#666" }}>
-      Loading Profile...
-    </div>
-  );
-
-  // 2. Handle case where user is not logged in or data failed
-  if (!userData) return (
-    <div style={{ textAlign: "center", padding: "100px" }}>
-      <p>No profile data found. Please log in again.</p>
-      <button onClick={handleLogout} style={{ color: "#4184f3", cursor: "pointer", border: "none", background: "none", textDecoration: "underline" }}>
-        Go to Login
-      </button>
-    </div>
-  );
+  if (loading) return <div style={{ textAlign: "center", padding: "100px" }}>Loading profile...</div>;
 
   return (
-    <div className="profile-wrapper" style={{ padding: "50px", display: "flex", justifyContent: "center" }}>
-      <div className="profile-card" style={{ 
-        width: "400px", 
-        textAlign: "center", 
-        backgroundColor: "#fff",
-        padding: "40px", 
-        borderRadius: "12px", 
-        boxShadow: "0 10px 25px rgba(0,0,0,0.05)",
-        border: "1px solid #f0f0f0" 
+    <div style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "80vh", width: "100%" }}>
+      <div style={{ 
+        width: "400px", padding: "40px", textAlign: "center", 
+        backgroundColor: "#fff", borderRadius: "15px", border: "1px solid #eee",
+        boxShadow: "0 10px 30px rgba(0,0,0,0.05)" 
       }}>
-        {/* FIXED: Added ?. to prevent charAt error */}
-        <div style={{ 
-          width: "90px", 
-          height: "90px", 
-          backgroundColor: "#f5d0fe", 
-          borderRadius: "50%", 
-          margin: "0 auto 20px", 
-          display: "flex", 
-          alignItems: "center", 
-          justifyContent: "center", 
-          color: "#d946ef", 
-          fontSize: "36px",
-          fontWeight: "bold"
-        }}>
-          {userData?.name?.charAt(0) || "U"}
-        </div>
-
-        <h2 style={{ margin: "5px 0", color: "#222", fontWeight: "600" }}>{userData?.name || "User"}</h2>
-        <p style={{ color: "#888", marginBottom: "30px", fontSize: "14px" }}>{userData?.email}</p>
         
-        <div style={{ backgroundColor: "#f8faff", padding: "20px", borderRadius: "8px", marginBottom: "25px" }}>
-          <span style={{ fontSize: "11px", color: "#4184f3", fontWeight: "700", letterSpacing: "1px" }}>ACCOUNT BALANCE</span>
-          <h1 style={{ margin: "10px 0 0", color: "#222", fontSize: "32px" }}>
-            ₹ {userData?.balance?.toLocaleString('en-IN') || "0.00"}
-          </h1>
+        {/* Avatar Circle */}
+        <div style={{ 
+          width: "80px", height: "80px", backgroundColor: "#f5d0fe", 
+          borderRadius: "50%", margin: "0 auto 20px", display: "flex", 
+          alignItems: "center", justifyContent: "center", color: "#d946ef", 
+          fontSize: "32px", fontWeight: "bold" 
+        }}>
+          {userData?.name ? userData.name.charAt(0).toUpperCase() : "U"}
         </div>
 
-        <button style={{ 
-          width: "100%", 
-          padding: "14px", 
-          borderRadius: "6px", 
-          border: "none", 
-          backgroundColor: "#4184f3", 
-          color: "white", 
-          cursor: "pointer",
-          fontWeight: "600",
-          fontSize: "15px",
-          marginBottom: "12px"
-        }}>
-          Add Funds
-        </button>
+        {/* Dynamic Name - Matches your Navbar */}
+        <h1 style={{ margin: "0 0 5px 0", fontSize: "28px", color: "#333" }}>
+          {userData?.name || "User"}
+        </h1>
+        <p style={{ color: "#888", marginBottom: "35px" }}>{userData?.email}</p>
+
+        <div style={{ textAlign: "left", marginBottom: "30px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", padding: "12px 0", borderBottom: "1px solid #f9f9f9" }}>
+            <span style={{ color: "#666" }}>Overall Investment</span>
+            <span style={{ fontWeight: "700" }}>₹{overallInvestment.toLocaleString('en-IN')}</span>
+          </div>
+        </div>
 
         <button 
-          onClick={handleLogout}
-          style={{ 
-            width: "100%", 
-            padding: "14px", 
-            borderRadius: "6px", 
-            border: "1px solid #ff4d4f", 
-            backgroundColor: "transparent", 
-            color: "#ff4d4f", 
-            cursor: "pointer", 
-            fontWeight: "600",
-            fontSize: "15px"
-          }}
+          onClick={handleLogout} 
+          style={{ width: "100%", padding: "12px", border: "1px solid #ff4d4f", color: "#ff4d4f", background: "none", borderRadius: "6px", cursor: "pointer", fontWeight: "bold" }}
         >
           Logout from Finora
         </button>

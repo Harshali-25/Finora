@@ -6,7 +6,8 @@ const OrdersSchema = new Schema({
   qty: Number, 
   price: Number, 
   mode: String, 
-  // Explicitly adding time field for easier frontend access
+  // ADD THIS: Essential for distinguishing long-term (CNC) from intraday (MIS)
+  product: { type: String, required: true }, 
   time: { type: Date, default: Date.now } 
 }, { timestamps: true });
 

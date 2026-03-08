@@ -9,12 +9,14 @@ import Signup from "./landing_page/auth/Signup";
 import Login from "./landing_page/auth/Login"; 
 import OtpVerify from "./landing_page/auth/OtpVerify"; 
 import Dashboard from "./components/Dashboard"; 
+import UserProfile from "./components/UserProfile";
 
 function App() {
   return (
     <BrowserRouter>
       <Routes>
         {/* 1. Dashboard: Independent and clean */}
+        <Route path="/dashboard/user" element={<UserProfile />} />
         <Route path="/dashboard/*" element={<Dashboard />} />
 
         {/* 2. Landing Pages: Flat structure to prevent blank pages */}

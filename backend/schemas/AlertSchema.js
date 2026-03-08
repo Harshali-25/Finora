@@ -1,11 +1,12 @@
-const { Schema, model } = require("mongoose");
+const { Schema } = require("mongoose");
 
-const AlertSchema = new Schema({
-  user: { type: Schema.Types.ObjectId, ref: "User", required: true },
-  name: { type: String, required: true }, // Stock Symbol
-  targetPrice: { type: Number, required: true },
-  condition: { type: String, enum: ["ABOVE", "BELOW"], default: "ABOVE" },
-  isActive: { type: Boolean, default: true },
-});
+const AlertsSchema = new Schema({
+  userId: { type: Schema.Types.ObjectId, ref: "User", required: true },
+  name: String,
+  targetPrice: Number,
+  qty: Number,
+  product: { type: String, default: "CNC" },
+  status: { type: String, default: "ACTIVE" } // ACTIVE or TRIGGERED
+}, { timestamps: true });
 
-module.exports = model("Alert", AlertSchema);
+module.exports = { AlertsSchema };

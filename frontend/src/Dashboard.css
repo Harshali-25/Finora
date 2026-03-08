@@ -556,3 +556,15 @@
   color: #666;
   text-transform: uppercase;
 }
+
+.product-tag {
+  background-color: #f0f0f0;
+  color: #666;
+  padding: 2px 5px;
+  border-radius: 2px;
+  font-size: 10px;
+  font-weight: bold;
+}
+
+.order-badge.buy { color: #4caf50; background: #e8f5e9; padding: 2px 4px; border-radius: 3px; }
+.order-badge.sell { color: #f44336; background: #ffebee; padding: 2px 4px; border-radius: 3px; }
