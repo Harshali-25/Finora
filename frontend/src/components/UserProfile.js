@@ -74,12 +74,6 @@ const UserProfile = () => {
         </h1>
         <p style={{ color: "#888", marginBottom: "35px" }}>{userData?.email}</p>
 
-        <div style={{ textAlign: "left", marginBottom: "30px" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", padding: "12px 0", borderBottom: "1px solid #f9f9f9" }}>
-            <span style={{ color: "#666" }}>Overall Investment</span>
-            <span style={{ fontWeight: "700" }}>₹{overallInvestment.toLocaleString('en-IN')}</span>
-          </div>
-        </div>
 
         <button 
           onClick={handleLogout} 

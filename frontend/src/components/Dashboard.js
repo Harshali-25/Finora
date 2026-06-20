@@ -9,7 +9,7 @@ import Positions from "./Positions";
 import WatchList from "./WatchList";
 import TopBar from "./TopBar"; 
 import AdminDashboard from "./AdminDashboard";
-import StockChart from "./StockChart";
+// import StockChart from "./StockChart";
 import AlertSettings from "./AlertSettings"; 
 import { watchlist as initialWatchlist } from "../data/data";
 
@@ -117,7 +117,7 @@ function Dashboard() {
             <Route path="/" element={
               <>
                 <Summary stocks={stocks} holdings={holdings} username={user?.name} />
-                <StockChart selectedStock={selectedStock} />
+                {/* <StockChart selectedStock={selectedStock} /> */}
               </>
             } />
             <Route path="orders" element={<Orders orders={orders} />} />
