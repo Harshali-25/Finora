@@ -25,7 +25,7 @@ const uri = process.env.MONGO_URL;
 
 // Middleware
 app.use(cors({
-  origin: ["http://localhost:3000", "http://localhost:3001"],
+  origin: ["http://localhost:3000", "http://localhost:3001", "https://finora-t6di.onrender.com/"],
   methods: ["GET", "POST", "PUT", "DELETE"],
   credentials: true
 }));
