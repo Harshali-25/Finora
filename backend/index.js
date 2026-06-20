@@ -60,6 +60,10 @@ const getLivePrice = async (symbol) => {
 
 // --- API ROUTES ---
 
+app.get("/", (req, res) => {
+  res.send("Finora Backend Running");
+});
+
 // 1. WATCHLIST MARKET DATA
 app.post("/api/marketData", verifyToken, async (req, res) => {
   try {
