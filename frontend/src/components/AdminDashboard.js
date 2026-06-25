@@ -7,7 +7,7 @@ function AdminDashboard() {
     const fetchAdminData = async () => {
       const token = localStorage.getItem("token");
       try {
-        const res = await fetch("http://localhost:3002/api/admin/dashboard", {
+        const res = await fetch("https://finora-7tf8.onrender.com/api/admin/dashboard", {
           headers: { "Authorization": `Bearer ${token}` }
         });
         const data = await res.json();

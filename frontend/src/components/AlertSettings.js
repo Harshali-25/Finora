@@ -22,7 +22,7 @@ const AlertSettings = ({ selectedStock, onClose, refreshData, alerts, mode = "SE
     };
 
     try {
-      const res = await fetch("http://localhost:3002/newAlert", {
+      const res = await fetch("https://finora-7tf8.onrender.com/newAlert", {
         method: "POST",
         headers: { 
           "Content-Type": "application/json",
@@ -54,7 +54,7 @@ const AlertSettings = ({ selectedStock, onClose, refreshData, alerts, mode = "SE
 
     try {
       // Changed endpoint from deleteAlert to cancelAlert to match your backend
-      const res = await fetch(`http://localhost:3002/cancelAlert/${alertId}`, {
+      const res = await fetch(`https://finora-7tf8.onrender.com/cancelAlert/${alertId}`, {
         method: "DELETE",
         headers: { "Authorization": `Bearer ${token}` },
       });

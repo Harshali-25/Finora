@@ -22,7 +22,7 @@ const executeAutoBuy = async (stock, user) => {
   };
 
   try {
-    await axios.post("http://localhost:3002/newOrder", orderData);
+    await axios.post("https://finora-7tf8.onrender.com/newOrder", orderData);
     console.log(`Auto-bought ${stock.name} at ₹${stock.price}`);
   } catch (err) {
     console.error("Auto-buy failed", err);

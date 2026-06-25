@@ -12,13 +12,13 @@ const UserProfile = () => {
     const fetchAllData = async () => {
       try {
         // 1. Fetch Profile Details
-        const profileRes = await axios.get("http://localhost:3002/api/user/profile", {
+        const profileRes = await axios.get("https://finora-7tf8.onrender.com/api/user/profile", {
           headers: { Authorization: `Bearer ${token}` },
         });
         setUserData(profileRes.data.user);
 
         // 2. Fetch Holdings
-        const holdingsRes = await axios.get("http://localhost:3002/api/holdings", {
+        const holdingsRes = await axios.get("https://finora-7tf8.onrender.com/api/holdings", {
           headers: { Authorization: `Bearer ${token}` },
         });
         
