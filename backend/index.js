@@ -34,7 +34,11 @@ app.use(
     credentials: true,
   }),
 );
-
+console.log("CORS ORIGIN:", [
+  "http://localhost:3000",
+  "http://localhost:3001",
+  "https://finora-1-fhjs.onrender.com",
+]);
 app.use(express.json());
 
 // --- HELPER: LIVE PRICE FETCHER ---
