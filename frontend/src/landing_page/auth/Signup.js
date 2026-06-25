@@ -16,7 +16,7 @@ function Signup() {
     e.preventDefault();
     try {
       const res = await fetch(
-        "https://finora-7tf8.onrender.com/api/auth/register",
+        "https://finora-a50c.onrender.com/api/auth/register",
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },

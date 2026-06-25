@@ -29,7 +29,7 @@ app.use(
     origin: [
       "http://localhost:3000",
       "http://localhost:3001",
-      "https://finora-1-fhjs.onrender.com",
+      "https://finora-frontend-a4j6.onrender.com",
     ],
     credentials: true,
   }),
@@ -37,7 +37,7 @@ app.use(
 console.log("CORS ORIGIN:", [
   "http://localhost:3000",
   "http://localhost:3001",
-  "https://finora-1-fhjs.onrender.com",
+  "https://finora-frontend-a4j6.onrender.com",
 ]);
 app.use(express.json());
 
