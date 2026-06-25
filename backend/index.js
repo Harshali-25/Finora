@@ -31,10 +31,10 @@ app.use(
       "http://localhost:3001",
       "https://finora-1-fhjs.onrender.com",
     ],
-    methods: ["GET", "POST", "PUT", "DELETE"],
     credentials: true,
   }),
 );
+
 app.use(express.json());
 
 // --- HELPER: LIVE PRICE FETCHER ---
