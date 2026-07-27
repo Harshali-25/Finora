@@ -24,16 +24,38 @@ const PORT = process.env.PORT || 3002;
 const uri = process.env.MONGO_URL;
 
 // Middleware
+const allowedOrigins = [
+  "http://localhost:3000",
+  "http://localhost:3001",
+  "https://finora-frontend-a4j6.onrender.com",
+];
+
 app.use(
   cors({
-    origin: [
-      "http://localhost:3000",
-      "http://localhost:3001",
-      "https://finora-frontend-a4j6.onrender.com",
-    ],
+    origin: function (origin, callback) {
+      if (!origin) return callback(null, true);
+
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+
+      return callback(new Error("Not allowed by CORS"));
+    },
     credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
   }),
 );
+
+// Handle preflight requests
+app.options("*", cors());
+
+
+app.use((req, res, next) => {
+  console.log(req.method, req.originalUrl, req.headers.origin);
+  next();
+});
+
 console.log("CORS ORIGIN:", [
   "http://localhost:3000",
   "http://localhost:3001",
