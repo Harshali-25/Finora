@@ -9,36 +9,49 @@ const router = express.Router();
 
 /* ================= REGISTER ================= */
 router.post("/register", async (req, res) => {
+  console.log("========== REGISTER START ==========");
+
   try {
+    console.log("Request Body:", req.body);
+
     if (mongoose.connection.readyState !== 1) {
+      console.log("DB not connected");
       return res.status(503).json({ message: "Database connection error" });
     }
 
-    const { name, email, password, role } = req.body; // Added role here
-    const normalizedEmail = (email || "").trim().toLowerCase();
+    const { name, email, password, role } = req.body;
 
-    if (!name || !normalizedEmail || !password) {
-      return res.status(400).json({ message: "All fields are required" });
-    }
+    console.log("Finding user...");
+
+    const normalizedEmail = email.trim().toLowerCase();
 
     let user = await User.findOne({ email: normalizedEmail });
+
+    console.log("User Found:", !!user);
+
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
     const otpExpiry = Date.now() + 10 * 60 * 1000;
 
-    if (user && user.isVerified) {
-      return res.status(409).json({ message: "User already exists. Please login." });
-    }
+    console.log("Hashing password...");
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
+    console.log("Password Hashed");
+
     if (user) {
-      user.name = name;
+      console.log("Updating user");
+
       user.password = hashedPassword;
       user.otp = otp;
       user.otpExpiry = otpExpiry;
-      user.role = role || "USER"; // Default to USER
+
       await user.save();
+
+      console.log("User Updated");
     } else {
+      console.log("Creating user");
+
       user = await User.create({
         name,
         email: normalizedEmail,
@@ -46,20 +59,34 @@ router.post("/register", async (req, res) => {
         otp,
         otpExpiry,
         isVerified: false,
-        role: role || "USER", 
+        role: role || "USER",
       });
+
+      console.log("User Created");
     }
 
-    const otpSent = await sendEmail(normalizedEmail, `Your Finora Verification Code is: ${otp}`);
+    console.log("Sending Email...");
+
+    const otpSent = await sendEmail(
+      normalizedEmail,
+      "Finora Email Verification",
+      `<h2>Your OTP is ${otp}</h2>`
+    );
+
+    console.log("Email Sent:", otpSent);
 
     return res.status(201).json({
-      message: otpSent ? "OTP sent to email" : "Registered! (Check server console for OTP)",
+      message: "OTP Sent",
       email: normalizedEmail,
     });
 
-  } catch (error) {
-    console.error("REGISTER ERROR:", error);
-    return res.status(500).json({ message: "Internal Server Error" });
+  } catch (err) {
+    console.error("REGISTER ERROR");
+    console.error(err);
+
+    return res.status(500).json({
+      message: err.message,
+    });
   }
 });
 
