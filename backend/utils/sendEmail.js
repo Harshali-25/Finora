@@ -16,34 +16,35 @@ const sendEmail = async (to, subject, content) => {
 
   try {
     const transporter = nodemailer.createTransport({
-      service: "gmail",
+      host: "smtp.gmail.com",
+      port: 465,
+      secure: true,
       auth: {
         user: EMAIL_USER,
         pass: EMAIL_PASS,
       },
+      connectionTimeout: 30000,
+      greetingTimeout: 30000,
+      socketTimeout: 30000,
     });
 
-    // Verify SMTP connection
     await transporter.verify();
     console.log("✅ Gmail SMTP Connected");
 
-    const mailOptions = {
+    const info = await transporter.sendMail({
       from: `"Finora" <${EMAIL_USER}>`,
-      to: to,
-      subject: subject,
+      to,
+      subject,
       html: content,
-    };
-
-    const info = await transporter.sendMail(mailOptions);
+    });
 
     console.log("✅ Email sent successfully!");
-    console.log("Message ID:", info.messageId);
+    console.log(info.messageId);
 
     return true;
   } catch (error) {
     console.error("❌ FULL NODEMAILER ERROR:");
     console.error(error);
-
     return false;
   }
 };
