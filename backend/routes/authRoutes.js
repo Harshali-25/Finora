@@ -27,43 +27,34 @@ router.post("/register", async (req, res) => {
 
     let user = await User.findOne({ email: normalizedEmail });
 
-    console.log("User Found:", !!user);
+if (user) {
 
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+  if (user.isVerified) {
+    return res.status(409).json({
+      message: "User already exists. Please login.",
+    });
+  }
 
-    const otpExpiry = Date.now() + 10 * 60 * 1000;
+  return res.status(409).json({
+    message: "Account already exists but is not verified. Please verify your email.",
+  });
+}
 
-    console.log("Hashing password...");
+const hashedPassword = await bcrypt.hash(password, 10);
 
-    const hashedPassword = await bcrypt.hash(password, 10);
+const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
-    console.log("Password Hashed");
+const otpExpiry = Date.now() + 10 * 60 * 1000;
 
-    if (user) {
-      console.log("Updating user");
-
-      user.password = hashedPassword;
-      user.otp = otp;
-      user.otpExpiry = otpExpiry;
-
-      await user.save();
-
-      console.log("User Updated");
-    } else {
-      console.log("Creating user");
-
-      user = await User.create({
-        name,
-        email: normalizedEmail,
-        password: hashedPassword,
-        otp,
-        otpExpiry,
-        isVerified: false,
-        role: role || "USER",
-      });
-
-      console.log("User Created");
-    }
+user = await User.create({
+  name,
+  email: normalizedEmail,
+  password: hashedPassword,
+  otp,
+  otpExpiry,
+  isVerified: false,
+  role: role || "USER",
+});
 
     console.log("Sending Email...");
 

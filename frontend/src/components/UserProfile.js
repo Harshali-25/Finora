@@ -44,9 +44,11 @@ const UserProfile = () => {
   }, [token]);
 
   const handleLogout = () => {
-    localStorage.clear();
-    window.location.href = "/login"; // Same port redirect
-  };
+  localStorage.clear();
+
+  window.location.href =
+    "https://finora-frontend-a4j6.onrender.com/";
+};
 
   if (loading) return <div style={{ textAlign: "center", padding: "100px" }}>Loading profile...</div>;
 
