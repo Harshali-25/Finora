@@ -97,7 +97,7 @@ const WatchList = ({ stocks = [], setStocks, holdings = [], positions = [], refr
     const tradeData = { name: selectedTrade.name, qty, price: executedPrice, product: productType, mode: tradeType };
 
     try {
-      const res = await fetch("https://finora-7tf8.onrender.com/newOrder", {
+      const res = await fetch("https://finora-a50c.onrender.com/newOrder", {
         method: "POST",
         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
         body: JSON.stringify(tradeData),
