@@ -68,10 +68,17 @@ router.post("/register", async (req, res) => {
     console.log("Sending Email...");
 
     const otpSent = await sendEmail(
-      normalizedEmail,
-      "Finora Email Verification",
-      `<h2>Your OTP is ${otp}</h2>`
-    );
+  normalizedEmail,
+  "Finora Email Verification",
+  `
+    <div style="font-family: Arial, sans-serif; padding: 20px;">
+      <h2 style="color:#2563eb;">Verify your Finora account</h2>
+      <p>Your OTP is:</p>
+      <h1 style="font-size:36px; letter-spacing:4px;">${otp}</h1>
+      <p>This OTP is valid for <b>10 minutes</b>.</p>
+    </div>
+  `
+);
 
     console.log("Email Sent:", otpSent);
 

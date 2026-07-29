@@ -1,50 +1,27 @@
-const nodemailer = require("nodemailer");
+const { Resend } = require("resend");
+
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 const sendEmail = async (to, subject, content) => {
-  const EMAIL_USER = process.env.EMAIL_USER;
-  const EMAIL_PASS = process.env.EMAIL_PASS;
-
-  console.log("========== EMAIL DEBUG ==========");
-  console.log("EMAIL_USER:", EMAIL_USER);
-  console.log("EMAIL_PASS Exists:", !!EMAIL_PASS);
-  console.log("Sending email to:", to);
-
-  if (!EMAIL_USER || !EMAIL_PASS) {
-    console.error("❌ Email credentials are missing!");
-    return false;
-  }
-
   try {
-    const transporter = nodemailer.createTransport({
-      host: "smtp.gmail.com",
-      port: 465,
-      secure: true,
-      auth: {
-        user: EMAIL_USER,
-        pass: EMAIL_PASS,
-      },
-      connectionTimeout: 30000,
-      greetingTimeout: 30000,
-      socketTimeout: 30000,
-    });
+    console.log("========== RESEND EMAIL ==========");
+    console.log("Sending to:", to);
 
-    await transporter.verify();
-    console.log("✅ Gmail SMTP Connected");
-
-    const info = await transporter.sendMail({
-      from: `"Finora" <${EMAIL_USER}>`,
-      to,
-      subject,
+    const data = await resend.emails.send({
+      from: "Finora <onboarding@resend.dev>",
+      to: [to],
+      subject: subject,
       html: content,
     });
 
-    console.log("✅ Email sent successfully!");
-    console.log(info.messageId);
+    console.log("Email sent successfully");
+    console.log(data);
 
     return true;
   } catch (error) {
-    console.error("❌ FULL NODEMAILER ERROR:");
+    console.error("RESEND ERROR:");
     console.error(error);
+
     return false;
   }
 };
