@@ -36,10 +36,10 @@ function Dashboard() {
     try {
       // Fetch Portfolio data in parallel
       const [hRes, oRes, pRes, aRes] = await Promise.all([
-        fetch("https://finora-7tf8.onrender.com/allHoldings", { headers }),
-        fetch("https://finora-7tf8.onrender.com/allOrders", { headers }),
-        fetch("https://finora-7tf8.onrender.com/allPositions", { headers }),
-        fetch("https://finora-7tf8.onrender.com/allAlerts", { headers }) 
+        fetch("https://finora-a50c.onrender.com/allHoldings", { headers }),
+        fetch("https://finora-a50c.onrender.com/allOrders", { headers }),
+        fetch("https://finora-a50c.onrender.com/allPositions", { headers }),
+        fetch("https://finora-a50c.onrender.com/allAlerts", { headers }) 
       ]);
 
       const hData = hRes.ok ? await hRes.json() : [];
@@ -55,7 +55,7 @@ function Dashboard() {
       // --- NEW: FETCH LIVE MARKET DATA FOR ALL WATCHLIST STOCKS ---
       // This sends all names (INFY, RELIANCE, etc.) to the backend to get real Yahoo Finance prices
       const symbols = initialWatchlist.map(s => s.name);
-      const marketRes = await fetch("https://finora-7tf8.onrender.com/api/marketData", {
+      const marketRes = await fetch("https://finora-a50c.onrender.com/api/marketData", {
         method: "POST",
         headers,
         body: JSON.stringify({ symbols })

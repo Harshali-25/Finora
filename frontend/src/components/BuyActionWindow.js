@@ -13,7 +13,7 @@ const BuyActionWindow = ({ uid }) => {
 
     try {
       await axios.post(
-        "https://finora-7tf8.onrender.com/newOrder",
+        "https://finora-a50c.onrender.com/newOrder",
         {
           name: uid,
           qty: Number(stockQuantity),

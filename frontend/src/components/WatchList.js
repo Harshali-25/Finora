@@ -124,7 +124,7 @@ const WatchList = ({ stocks = [], setStocks, holdings = [], positions = [], refr
     };
 
     try {
-      const res = await fetch("https://finora-7tf8.onrender.com/newAlert", {
+      const res = await fetch("https://finora-a50c.onrender.com/newAlert", {
         method: "POST",
         headers: { 
           "Content-Type": "application/json", 
