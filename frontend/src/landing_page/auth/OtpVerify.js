@@ -14,7 +14,7 @@ function OtpVerify() {
     setLoading(true);
 
     try {
-      const res = await fetch("https://finora-7tf8.onrender.com/api/auth/verify-otp", {
+      const res = await fetch("https://finora-a50c.onrender.com/api/auth/verify-otp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: email.trim().toLowerCase(), otp: otp.trim() }),
